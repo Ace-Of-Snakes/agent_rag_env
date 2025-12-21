@@ -64,7 +64,7 @@ class Chunk(Base, UUIDMixin, TimestampMixin):
     search_vector: Mapped[Optional[str]] = mapped_column(TSVECTOR, nullable=True)
     
     # Additional metadata (position info, source details)
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    chunk_metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     
     # Relationship to parent document
     document: Mapped["Document"] = relationship(

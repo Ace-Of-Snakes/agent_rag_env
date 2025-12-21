@@ -184,6 +184,9 @@ class ChatService:
             Created Message object
         """
         async def execute(session: AsyncSession) -> Message:
+            # Handle parent_id logic
+            nonlocal parent_id
+            
             # Get the chat
             chat = await self.get_chat(chat_id, session)
             

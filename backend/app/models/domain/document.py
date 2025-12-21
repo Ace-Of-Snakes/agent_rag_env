@@ -69,7 +69,7 @@ class Document(Base, UUIDMixin, TimestampMixin):
     search_vector: Mapped[Optional[str]] = mapped_column(TSVECTOR, nullable=True)
     
     # Additional metadata (extracted from document)
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    document_metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     
     # Processing timestamps
     processing_started_at: Mapped[Optional[datetime]] = mapped_column(

@@ -1,0 +1,120 @@
+.sidebar {
+  width: $sidebar-width;
+  height: 100vh;
+  background: $color-bg-primary;
+  border-right: 1px solid $color-border;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transform: translateX(-100%);
+  transition: transform $transition-normal;
+  
+  &--open {
+    transform: translateX(0);
+  }
+  
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-4;
+    border-bottom: 1px solid $color-border;
+  }
+  
+  &__logo {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+    margin: 0;
+  }
+  
+  &__chats {
+    flex: 1;
+    overflow-y: auto;
+    padding: $spacing-3;
+    @include custom-scrollbar;
+  }
+  
+  &__section-title {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $color-text-tertiary;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: $spacing-2 $spacing-2;
+    margin: 0;
+  }
+  
+  &__loading,
+  &__empty {
+    padding: $spacing-4;
+    text-align: center;
+    color: $color-text-tertiary;
+    font-size: $font-size-sm;
+  }
+  
+  &__chat-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  &__chat-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-2 $spacing-3;
+    border-radius: $border-radius-md;
+    cursor: pointer;
+    transition: all $transition-fast;
+    
+    &:hover {
+      background: $color-bg-secondary;
+      
+      .sidebar__chat-delete {
+        opacity: 1;
+      }
+    }
+    
+    &.active {
+      background: rgba($color-primary, 0.1);
+      
+      .sidebar__chat-title {
+        color: $color-primary;
+      }
+    }
+  }
+  
+  &__chat-title {
+    flex: 1;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    @include text-truncate;
+  }
+  
+  &__chat-delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: $border-radius-sm;
+    color: $color-text-tertiary;
+    opacity: 0;
+    cursor: pointer;
+    transition: all $transition-fast;
+    
+    &:hover {
+      background: rgba($color-error, 0.1);
+      color: $color-error;
+    }
+    
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+}

@@ -109,7 +109,7 @@ class Message(Base, UUIDMixin, TimestampMixin):
     sources: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     
     # Additional metadata
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    message_metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     
     # Soft delete
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

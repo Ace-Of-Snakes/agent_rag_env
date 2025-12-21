@@ -13,7 +13,7 @@ from app.core.constants import AgentConstants, APIConstants
 from app.core.exceptions import MaxIterationsExceededError, ToolExecutionError
 from app.core.logging import get_logger
 from app.agents.prompts import build_agent_prompt, build_tool_result_prompt
-from app.agents.tools.registry import tool_registry, get_tool
+from app.agents.tools import tool_registry
 from app.agents.tools.base import ToolResult
 from app.services.chat.history import history_manager
 from app.services.llm.text import text_service
@@ -296,7 +296,7 @@ class AgentOrchestrator:
         params: Dict[str, Any]
     ) -> ToolResult:
         """Execute a tool by name."""
-        tool = get_tool(tool_name)
+        tool = tool_registry.get_tool(tool_name)
         
         start_time = time.time()
         result = await tool.execute(params)

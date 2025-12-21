@@ -1,0 +1,43 @@
+.spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  
+  &--sm {
+    .spinner__circle {
+      width: 16px;
+      height: 16px;
+      border-width: 2px;
+    }
+  }
+  
+  &--md {
+    .spinner__circle {
+      width: 24px;
+      height: 24px;
+      border-width: 2px;
+    }
+  }
+  
+  &--lg {
+    .spinner__circle {
+      width: 40px;
+      height: 40px;
+      border-width: 3px;
+    }
+  }
+  
+  &__circle {
+    border-style: solid;
+    border-color: $color-gray-200;
+    border-top-color: $color-primary;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

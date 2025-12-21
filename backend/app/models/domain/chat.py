@@ -117,9 +117,9 @@ class Chat(Base, UUIDMixin, TimestampMixin):
     def update_message_count(self, delta: int = 1) -> None:
         """Update the message count."""
         self.message_count += delta
-        self.last_message_at = datetime.now()
+        self.last_message_at = datetime.utcnow()
     
     def soft_delete(self) -> None:
         """Soft delete the chat."""
         self.is_deleted = True
-        self.deleted_at = datetime.now()
+        self.deleted_at = datetime.utcnow()
