@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  # =============================================================================
+  # Backend API
+  # =============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ragent-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Database
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ragent
+      POSTGRES_PASSWORD: ragent_secret
+      POSTGRES_DB: ragent
+      
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      
+      # Ollama
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_VISION_MODEL: qwen2-vl:7b-instruct-q4_K_M
+      OLLAMA_TEXT_MODEL: qwen2.5:7b-instruct-q4_K_M
+      OLLAMA_EMBEDDING_MODEL: nomic-embed-text
+      OLLAMA_KEEP_ALIVE: 60m
+      
+      # Performance
+      EMBEDDING_BATCH_SIZE: 16
+      VISION_GATING_ENABLED: "true"
+      VISION_GATING_MIN_IMAGE_RATIO: "0.05"
+      RESPONSE_CACHE_ENABLED: "true"
+      RESPONSE_CACHE_TTL_SECONDS: 3600
+      MAX_HISTORY_TOKENS: 2048
+      
+      # Document processing
+      CHUNK_SIZE: 1000
+      CHUNK_OVERLAP: 200
+      MAX_UPLOAD_SIZE_MB: 50
+      
+      # API
+      API_CORS_ORIGINS: '["http://localhost:3000","http://localhost:5173"]'
+    volumes:
+      - ragent-uploads:/tmp/ragent/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - ragent-network
+
+  # =============================================================================
+  # Frontend
+  # =============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ragent-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - ragent-network
+
+  # =============================================================================
+  # PostgreSQL with pgvector
+  # =============================================================================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ragent-postgres
+    environment:
+      POSTGRES_USER: ragent
+      POSTGRES_PASSWORD: ragent_secret
+      POSTGRES_DB: ragent
+    ports:
+      - "5432:5432"
+    volumes:
+      - ragent-postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ragent -d ragent"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - ragent-network
+
+  # =============================================================================
+  # Redis
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: ragent-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ragent-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - ragent-network
+
+  # =============================================================================
+  # Ollama (LLM Server)
+  # =============================================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ragent-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ragent-ollama-data:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: 60m
+      OLLAMA_NUM_PARALLEL: 2
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    networks:
+      - ragent-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  ragent-postgres-data:
+  ragent-redis-data:
+  ragent-ollama-data:
+  ragent-uploads:
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  ragent-network:
+    driver: bridge
