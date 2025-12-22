@@ -296,7 +296,7 @@ class AgentOrchestrator:
         params: Dict[str, Any]
     ) -> ToolResult:
         """Execute a tool by name."""
-        tool = tool_registry.get_tool(tool_name)
+        tool = tool_registry.get(tool_name)
         
         start_time = time.time()
         result = await tool.execute(params)
