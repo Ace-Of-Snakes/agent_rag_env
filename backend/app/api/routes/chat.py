@@ -200,15 +200,14 @@ async def send_message_stream(
                     sources = event.data.get("sources", [])
             
             # Save assistant message after streaming completes
-            async with db.begin():
-                await chat_service.add_message(
-                    chat_id=chat_id,
-                    content=full_response,
-                    role=MessageRole.ASSISTANT,
-                    parent_id=user_message.id,
-                    sources={"sources": sources} if sources else None,
-                    session=db
-                )
+            await chat_service.add_message(
+                chat_id=chat_id,
+                content=full_response,
+                role=MessageRole.ASSISTANT,
+                parent_id=user_message.id,
+                sources={"sources": sources} if sources else None
+                # Don't pass session - let it create its own
+            )
                 
         except Exception as e:
             logger.error("Stream error", error=str(e))
