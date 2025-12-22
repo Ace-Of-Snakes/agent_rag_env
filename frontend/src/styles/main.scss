@@ -23,6 +23,21 @@ body {
   line-height: $line-height-normal;
   color: $color-text-primary;
   background: $color-bg-secondary;
+  transition: background-color $transition-normal, color $transition-normal;
+}
+
+// Smooth transitions for theme changes
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+// Disable transitions on page load (add via JS after load)
+.no-transitions * {
+  transition: none !important;
 }
 
 // Typography
@@ -47,7 +62,7 @@ p {
 }
 
 a {
-  color: $color-primary;
+  color: var(--color-primary);
   text-decoration: none;
   
   &:hover {
@@ -67,8 +82,8 @@ pre {
   font-family: $font-family-mono;
   font-size: $font-size-sm;
   padding: $spacing-4;
-  background: $color-gray-800;
-  color: $color-gray-100;
+  background: #1e1e1e;
+  color: #d4d4d4;
   border-radius: $border-radius-md;
   overflow-x: auto;
   
@@ -80,12 +95,13 @@ pre {
 
 // Focus styles
 :focus-visible {
-  @include focus-ring;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 // Selection
 ::selection {
-  background: rgba($color-primary, 0.2);
+  background: rgba(218, 119, 86, 0.2);
 }
 
 // =============================================================================
@@ -143,7 +159,7 @@ pre {
     }
   }
   
-  @media (max-width: $breakpoint-md - 1) {
+  @media (max-width: ($breakpoint-md - 1)) {
     margin-left: 0;
   }
 }
@@ -154,7 +170,7 @@ pre {
   flex-direction: column;
   padding: $spacing-6;
   
-  @media (max-width: $breakpoint-md - 1) {
+  @media (max-width: ($breakpoint-md - 1)) {
     padding: $spacing-4;
   }
 }

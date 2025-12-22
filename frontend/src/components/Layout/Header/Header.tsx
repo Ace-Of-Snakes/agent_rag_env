@@ -1,12 +1,21 @@
+import { ThemeToggle } from '@/components/common';
 import './Header.scss';
 
 interface HeaderProps {
   title?: string;
+  theme: 'light' | 'dark';
   onToggleSidebar?: () => void;
   onNewChat?: () => void;
+  onToggleTheme?: () => void;
 }
 
-export function Header({ title = 'RAGent', onToggleSidebar, onNewChat }: HeaderProps) {
+export function Header({ 
+  title = 'RAGent', 
+  theme,
+  onToggleSidebar, 
+  onNewChat,
+  onToggleTheme 
+}: HeaderProps) {
   return (
     <header className="header">
       <div className="header__left">
@@ -18,6 +27,7 @@ export function Header({ title = 'RAGent', onToggleSidebar, onNewChat }: HeaderP
         <h1 className="header__title">{title}</h1>
       </div>
       <div className="header__right">
+        <ThemeToggle theme={theme} onToggle={onToggleTheme || (() => {})} />
         <button className="header__new-chat-btn" onClick={onNewChat} aria-label="New chat">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 5v14M5 12h14" />

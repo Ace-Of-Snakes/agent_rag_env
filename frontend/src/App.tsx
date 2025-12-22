@@ -3,12 +3,14 @@ import { Header } from './components/Layout/Header/Header';
 import { Sidebar } from './components/Layout/Sidebar/Sidebar';
 import { ChatContainer } from './components/Chat/ChatContainer/ChatContainer';
 import { chatApi } from './services/api';
+import { useTheme } from './hooks/useTheme';
 import './App.scss';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { theme, toggleTheme } = useTheme();
 
   const handleNewChat = useCallback(async () => {
     try {
@@ -38,6 +40,8 @@ function App() {
       <Header 
         onToggleSidebar={toggleSidebar} 
         onNewChat={handleNewChat}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
       
       <div className="app__body">
