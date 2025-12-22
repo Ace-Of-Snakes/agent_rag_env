@@ -45,7 +45,7 @@ A local RAG (Retrieval-Augmented Generation) system with multi-modal PDF process
 0. **Possible Pre-Requisites**
    - Make sure Docker has access to your GPU (NVIDIA Container Toolkit) -> https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
    - Install Ollama on your host machine: https://ollama.com/download
-
+   - Pull needed models with ollama pull model_name
 
 1. **Clone the repository**
    ```bash

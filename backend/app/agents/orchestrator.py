@@ -93,7 +93,7 @@ class AgentOrchestrator:
         tools = tool_registry.get_all_definitions()
         
         # Build system prompt with tools
-        system_prompt = build_agent_prompt([t.__dict__ for t in tools])
+        system_prompt = build_agent_prompt([t.to_dict() for t in tools])
         
         # Prepare context (may truncate or summarize history)
         prepared_history, _, _ = await history_manager.prepare_context(
@@ -198,7 +198,7 @@ class AgentOrchestrator:
         start_time = time.time()
         
         tools = tool_registry.get_all_definitions()
-        system_prompt = build_agent_prompt([t.__dict__ for t in tools])
+        system_prompt = build_agent_prompt([t.to_dict() for t in tools])
         
         prepared_history, _, _ = await history_manager.prepare_context(
             conversation_history

@@ -1,5 +1,13 @@
 version: '3.8'
 
+# =============================================================================
+# Shared Configuration (YAML Anchors)
+# =============================================================================
+x-ollama-models: &ollama-models
+  OLLAMA_TEXT_MODEL: qwen3:8b-q4_K_M
+  OLLAMA_VISION_MODEL: qwen3-vl:8b-instruct-q4_K_M
+  OLLAMA_EMBEDDING_MODEL: nomic-embed-text:latest
+
 services:
   # =============================================================================
   # Backend API
@@ -24,10 +32,8 @@ services:
       REDIS_PORT: 6379
       
       # Ollama
-      OLLAMA_BASE_URL: http://ollama:11434
-      OLLAMA_VISION_MODEL: qwen2-vl:7b-instruct-q4_K_M
-      OLLAMA_TEXT_MODEL: qwen2.5:7b-instruct-q4_K_M
-      OLLAMA_EMBEDDING_MODEL: nomic-embed-text
+      OLLAMA_BASE_URL: http://ollama:11436
+      <<: *ollama-models
       OLLAMA_KEEP_ALIVE: 60m
       
       # Performance
@@ -53,7 +59,7 @@ services:
       redis:
         condition: service_healthy
       ollama:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - ragent-network
@@ -126,10 +132,13 @@ services:
     image: ollama/ollama:latest
     container_name: ragent-ollama
     ports:
-      - "11434:11434"
+      - "11436:11436"
     volumes:
-      - ragent-ollama-data:/root/.ollama
+      # Mount host's ollama directory - models must be pre-pulled on host
+      # Run: ollama pull qwen2.5:7b-instruct-q4_K_M qwen2-vl:7b-instruct-q4_K_M nomic-embed-text
+      - /usr/share/ollama/.ollama:/root/.ollama
     environment:
+      OLLAMA_HOST: 0.0.0.0:11436
       OLLAMA_KEEP_ALIVE: 60m
       OLLAMA_NUM_PARALLEL: 2
     deploy:
@@ -139,6 +148,12 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
     networks:
       - ragent-network
@@ -149,7 +164,6 @@ services:
 volumes:
   ragent-postgres-data:
   ragent-redis-data:
-  ragent-ollama-data:
   ragent-uploads:
 
 # =============================================================================
