@@ -1,0 +1,126 @@
+.code-block {
+  margin: $spacing-4 0;
+  border-radius: $border-radius-lg;
+  overflow: hidden;
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-2 $spacing-4;
+    background: #2d2d2d;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  &__language {
+    font-family: $font-family-mono;
+    font-size: $font-size-xs;
+    color: #a0a0a0;
+    text-transform: lowercase;
+  }
+
+  &__copy {
+    display: flex;
+    align-items: center;
+    gap: $spacing-1;
+    padding: $spacing-1 $spacing-2;
+    background: transparent;
+    border: none;
+    border-radius: $border-radius-sm;
+    color: #a0a0a0;
+    font-size: $font-size-xs;
+    font-family: $font-family-sans;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+    }
+  }
+
+  &__content {
+    overflow-x: auto;
+    @include custom-scrollbar;
+
+    pre {
+      margin: 0;
+      padding: $spacing-4;
+      background: transparent;
+      border-radius: 0;
+
+      code {
+        font-family: $font-family-mono;
+        font-size: $font-size-sm;
+        line-height: 1.6;
+        color: #d4d4d4;
+        background: transparent;
+        padding: 0;
+        white-space: pre;
+        word-break: normal;
+        word-wrap: normal;
+        tab-size: 2;
+      }
+    }
+  }
+}
+
+// Inline code styling
+.code-inline {
+  font-family: $font-family-mono;
+  font-size: 0.875em;
+  padding: 0.15em 0.4em;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: $border-radius-sm;
+  color: inherit;
+  
+  [data-theme="dark"] & {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+// Basic syntax highlighting (without external library)
+.code-block__content {
+  // Keywords
+  .keyword {
+    color: #569cd6;
+  }
+  
+  // Strings
+  .string {
+    color: #ce9178;
+  }
+  
+  // Comments
+  .comment {
+    color: #6a9955;
+    font-style: italic;
+  }
+  
+  // Numbers
+  .number {
+    color: #b5cea8;
+  }
+  
+  // Functions
+  .function {
+    color: #dcdcaa;
+  }
+  
+  // Variables
+  .variable {
+    color: #9cdcfe;
+  }
+  
+  // Operators
+  .operator {
+    color: #d4d4d4;
+  }
+}

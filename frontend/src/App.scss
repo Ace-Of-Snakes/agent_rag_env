@@ -15,12 +15,9 @@
     display: flex;
     flex-direction: column;
     background: $color-bg-primary;
-    transition: margin-left $transition-normal;
     overflow: hidden;
-
-    &--expanded {
-      margin-left: 0;
-    }
+    min-width: 0; // Allow flex item to shrink below content size
+    transition: all $transition-normal;
   }
 
   &__error {

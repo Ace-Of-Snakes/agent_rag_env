@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { CodeBlock } from '../CodeBlock/CodeBlock';
 import type { Message } from '@/types';
 import './MessageBubble.scss';
 
@@ -7,9 +9,66 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
 }
 
+/**
+ * Attempts to parse the content if it's a JSON agent response
+ * and extract the actual response text.
+ */
+function parseContent(content: string): string {
+  if (!content) return '';
+  
+  const trimmed = content.trim();
+  
+  // Check if it looks like JSON
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      // Check if it's an agent response with thought/action/response structure
+      if (typeof parsed === 'object' && parsed !== null) {
+        // Return the response field if it exists
+        if ('response' in parsed && typeof parsed.response === 'string') {
+          return parsed.response;
+        }
+        // Sometimes the actual content might be in a message field
+        if ('message' in parsed && typeof parsed.message === 'string') {
+          return parsed.message;
+        }
+        // If it's an agent thought without a direct response, return the content
+        if ('thought' in parsed && parsed.action === 'respond') {
+          return parsed.response || content;
+        }
+      }
+    } catch {
+      // Not valid JSON, return as-is
+    }
+  }
+  
+  // Check for JSON code blocks at the start that might be agent output
+  const jsonBlockMatch = trimmed.match(/^```(?:json)?\s*\n?({[\s\S]*?})\s*\n?```/);
+  if (jsonBlockMatch) {
+    try {
+      const parsed = JSON.parse(jsonBlockMatch[1]);
+      if (typeof parsed === 'object' && 'response' in parsed) {
+        return parsed.response;
+      }
+    } catch {
+      // Continue with original content
+    }
+  }
+  
+  return content;
+}
+
 export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
+
+  // Parse and clean the content
+  const displayContent = useMemo(() => {
+    if (isAssistant) {
+      return parseContent(message.content);
+    }
+    return message.content;
+  }, [message.content, isAssistant]);
 
   return (
     <div className={`message ${isUser ? 'message--user' : 'message--assistant'}`}>
@@ -30,18 +89,85 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
           {isAssistant ? (
             <ReactMarkdown
               components={{
-                pre: ({ children }) => (
-                  <pre className="message__code-block">{children}</pre>
+                // Handle code blocks
+                pre: ({ children }) => {
+                  return <>{children}</>;
+                },
+                code: ({ className, children }) => {
+                  // Check if it's a code block (has language class) or inline code
+                  const match = /language-(\w+)/.exec(className || '');
+                  const codeContent = String(children).replace(/\n$/, '');
+                  
+                  // If it has a language class or is multiline, treat as code block
+                  const isCodeBlock = match || codeContent.includes('\n');
+                  
+                  if (isCodeBlock) {
+                    return (
+                      <CodeBlock 
+                        code={codeContent}
+                        language={match ? match[1] : undefined}
+                      />
+                    );
+                  }
+                  
+                  // Inline code
+                  return (
+                    <CodeBlock 
+                      code={codeContent}
+                      inline
+                    />
+                  );
+                },
+                // Style paragraphs
+                p: ({ children }) => (
+                  <p className="message__paragraph">{children}</p>
                 ),
-                code: ({ children }) => (
-                  <code className="message__code">{children}</code>
+                // Style lists
+                ul: ({ children }) => (
+                  <ul className="message__list message__list--unordered">{children}</ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="message__list message__list--ordered">{children}</ol>
+                ),
+                li: ({ children }) => (
+                  <li className="message__list-item">{children}</li>
+                ),
+                // Style headings
+                h1: ({ children }) => (
+                  <h1 className="message__heading message__heading--1">{children}</h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="message__heading message__heading--2">{children}</h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="message__heading message__heading--3">{children}</h3>
+                ),
+                // Style links
+                a: ({ href, children }) => (
+                  <a href={href} className="message__link" target="_blank" rel="noopener noreferrer">
+                    {children}
+                  </a>
+                ),
+                // Style blockquotes
+                blockquote: ({ children }) => (
+                  <blockquote className="message__blockquote">{children}</blockquote>
+                ),
+                // Style horizontal rules
+                hr: () => <hr className="message__hr" />,
+                // Style strong/bold
+                strong: ({ children }) => (
+                  <strong className="message__strong">{children}</strong>
+                ),
+                // Style emphasis/italic
+                em: ({ children }) => (
+                  <em className="message__em">{children}</em>
                 ),
               }}
             >
-              {message.content}
+              {displayContent}
             </ReactMarkdown>
           ) : (
-            <p>{message.content}</p>
+            <p>{displayContent}</p>
           )}
           
           {isStreaming && (

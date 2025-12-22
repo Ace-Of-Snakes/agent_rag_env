@@ -52,7 +52,7 @@ function App() {
           onNewChat={handleNewChat}
         />
         
-        <main className={`app__main ${sidebarOpen ? '' : 'app__main--expanded'}`}>
+        <main className="app__main">
           <ChatContainer
             chatId={currentChatId}
             onError={handleError}
