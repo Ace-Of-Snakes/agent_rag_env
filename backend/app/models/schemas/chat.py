@@ -49,7 +49,7 @@ class MessageResponse(BaseModel):
     tool_params: Optional[Dict[str, Any]] = None
     attachments: Optional[Dict[str, Any]] = None
     sources: Optional[Dict[str, Any]] = None
-    metadata: Optional[Dict[str, Any]] = None
+    message_metadata: Optional[Dict[str, Any]] = None
     created_at: datetime
 
 

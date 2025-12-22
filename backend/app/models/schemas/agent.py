@@ -122,7 +122,7 @@ class FileReaderResponse(BaseModel):
     content: str
     file_type: str
     page_count: Optional[int] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    file_metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 # =============================================================================

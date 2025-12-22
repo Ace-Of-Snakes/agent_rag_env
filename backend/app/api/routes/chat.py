@@ -77,15 +77,15 @@ async def get_chat(
     """Get a chat with its messages."""
     chat = await chat_service.get_chat(chat_id, session=db)
     
-    # Get messages for the active branch
-    history = await chat_service.get_conversation_history(
+    # Get full message objects for the active branch
+    messages = await chat_service.get_messages(
         chat_id=chat_id,
         session=db
     )
     
     return ChatDetailResponse(
         **ChatResponse.model_validate(chat).model_dump(),
-        messages=[MessageResponse(**msg) for msg in history] if history else []
+        messages=[MessageResponse.model_validate(msg) for msg in messages]
     )
 
 

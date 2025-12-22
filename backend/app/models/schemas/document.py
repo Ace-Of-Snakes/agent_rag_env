@@ -133,7 +133,7 @@ class SearchResult(BaseModel):
     content: str
     page_number: Optional[int] = None
     similarity_score: float
-    metadata: Optional[Dict[str, Any]] = None
+    document_metadata: Optional[Dict[str, Any]] = None
 
 
 class SearchResponse(BaseModel):

@@ -120,6 +120,44 @@ class ChatService:
             async with get_db_session() as session:
                 return await execute(session)
     
+    async def get_messages(
+        self,
+        chat_id: uuid.UUID,
+        branch: Optional[str] = None,
+        session: Optional[AsyncSession] = None
+    ) -> List[Message]:
+        """
+        Get all messages for a chat (full Message objects).
+        
+        Args:
+            chat_id: Chat identifier
+            branch: Branch name (defaults to active branch)
+            session: Database session
+            
+        Returns:
+            List of Message objects
+        """
+        async def execute(session: AsyncSession) -> List[Message]:
+            chat = await self.get_chat(chat_id, session)
+            branch_name = branch or chat.active_branch
+            
+            result = await session.execute(
+                select(Message)
+                .where(
+                    Message.chat_id == chat_id,
+                    Message.branch == branch_name,
+                    Message.is_deleted == False
+                )
+                .order_by(Message.created_at)
+            )
+            return list(result.scalars().all())
+        
+        if session:
+            return await execute(session)
+        else:
+            async with get_db_session() as session:
+                return await execute(session)
+            
     async def list_chats(
         self,
         page: int = 1,
