@@ -1,7 +1,7 @@
 .sidebar {
   width: $sidebar-width;
-  height: 100vh;
-  background: $color-bg-primary;
+  height: 100%;
+  background: $color-bg-secondary;
   border-right: 1px solid $color-border;
   display: flex;
   flex-direction: column;
@@ -64,23 +64,25 @@
     align-items: center;
     justify-content: space-between;
     padding: $spacing-2 $spacing-3;
-    border-radius: $border-radius-md;
+    border-radius: $border-radius-lg;
     cursor: pointer;
     transition: all $transition-fast;
+    min-height: 40px;
     
     &:hover {
-      background: $color-bg-secondary;
+      background: $color-bg-tertiary;
       
-      .sidebar__chat-delete {
+      .sidebar__chat-actions {
         opacity: 1;
       }
     }
     
     &.active {
-      background: rgba($color-primary, 0.1);
+      background: $color-bg-tertiary;
       
       .sidebar__chat-title {
-        color: $color-primary;
+        color: $color-text-primary;
+        font-weight: $font-weight-medium;
       }
     }
   }
@@ -88,10 +90,36 @@
   &__chat-title {
     flex: 1;
     font-size: $font-size-sm;
-    color: $color-text-primary;
+    color: $color-text-secondary;
     @include text-truncate;
+    cursor: pointer;
+  }
+
+  &__chat-rename-input {
+    flex: 1;
+    padding: $spacing-1 $spacing-2;
+    font-size: $font-size-sm;
+    border: 2px solid $color-primary;
+    border-radius: $border-radius-sm;
+    background: $color-bg-primary;
+    color: $color-text-primary;
+    outline: none;
+    min-width: 0;
+    
+    &:focus {
+      box-shadow: 0 0 0 3px rgba($color-primary, 0.2);
+    }
+  }
+
+  &__chat-actions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-1;
+    opacity: 0;
+    transition: opacity $transition-fast;
   }
   
+  &__chat-rename,
   &__chat-delete {
     display: flex;
     align-items: center;
@@ -103,18 +131,26 @@
     border: none;
     border-radius: $border-radius-sm;
     color: $color-text-tertiary;
-    opacity: 0;
     cursor: pointer;
     transition: all $transition-fast;
-    
-    &:hover {
-      background: rgba($color-error, 0.1);
-      color: $color-error;
-    }
     
     svg {
       width: 14px;
       height: 14px;
+    }
+  }
+
+  &__chat-rename {
+    &:hover {
+      background: rgba($color-primary, 0.1);
+      color: $color-primary;
+    }
+  }
+  
+  &__chat-delete {
+    &:hover {
+      background: rgba($color-error, 0.1);
+      color: $color-error;
     }
   }
 }

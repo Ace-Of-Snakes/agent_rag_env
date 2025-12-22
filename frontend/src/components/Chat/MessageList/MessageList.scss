@@ -1,7 +1,14 @@
 .message-list {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   @include custom-scrollbar;
+  
+  &__container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: $spacing-6 $spacing-4;
+  }
   
   &--empty {
     display: flex;
@@ -36,7 +43,7 @@
     padding: $spacing-3 $spacing-4;
     background: $color-bg-primary;
     border: 1px solid $color-border;
-    border-radius: $border-radius-md;
+    border-radius: $border-radius-lg;
     color: $color-text-primary;
     font-size: $font-size-sm;
     text-align: left;

@@ -8,6 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents import agent_orchestrator, StreamEvent
@@ -23,6 +24,7 @@ from app.models.schemas import (
     ChatDetailResponse,
     ChatListResponse,
     ChatResponse,
+    ChatUpdate,
     MessageCreate,
     MessageResponse,
 )
@@ -32,6 +34,9 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
+# =============================================================================
+# Routes
+# =============================================================================
 
 @router.post("", response_model=ChatResponse, status_code=201)
 async def create_chat(
@@ -87,6 +92,26 @@ async def get_chat(
         **ChatResponse.model_validate(chat).model_dump(),
         messages=[MessageResponse.model_validate(msg) for msg in messages]
     )
+
+
+@router.patch("/{chat_id}", response_model=ChatResponse)
+async def update_chat(
+    chat_id: uuid.UUID,
+    data: ChatUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update a chat's properties.
+    
+    Currently supports updating:
+    - title: The display name of the chat
+    """
+    chat = await chat_service.update_chat(
+        chat_id=chat_id,
+        title=data.title,
+        session=db
+    )
+    return ChatResponse.model_validate(chat)
 
 
 @router.delete("/{chat_id}", status_code=204)

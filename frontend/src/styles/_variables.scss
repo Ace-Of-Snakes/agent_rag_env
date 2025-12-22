@@ -1,23 +1,23 @@
 // =============================================================================
-// Color Palette
+// Color Palette - Claude-inspired theme
 // =============================================================================
 
-// Primary colors
-$color-primary: #6366f1;
-$color-primary-light: #818cf8;
-$color-primary-dark: #4f46e5;
+// Primary colors (warmer, more subtle)
+$color-primary: #da7756;  // Warm terracotta/coral
+$color-primary-light: #e8956f;
+$color-primary-dark: #c9684a;
 
 // Neutral colors
-$color-gray-50: #f9fafb;
-$color-gray-100: #f3f4f6;
-$color-gray-200: #e5e7eb;
-$color-gray-300: #d1d5db;
-$color-gray-400: #9ca3af;
-$color-gray-500: #6b7280;
-$color-gray-600: #4b5563;
-$color-gray-700: #374151;
-$color-gray-800: #1f2937;
-$color-gray-900: #111827;
+$color-gray-50: #faf9f7;
+$color-gray-100: #f5f4f2;
+$color-gray-200: #e8e6e3;
+$color-gray-300: #d9d6d1;
+$color-gray-400: #a8a29e;
+$color-gray-500: #78716c;
+$color-gray-600: #57534e;
+$color-gray-700: #44403c;
+$color-gray-800: #292524;
+$color-gray-900: #1c1917;
 
 // Semantic colors
 $color-success: #10b981;
@@ -27,18 +27,22 @@ $color-info: #3b82f6;
 
 // Background colors
 $color-bg-primary: #ffffff;
-$color-bg-secondary: $color-gray-50;
-$color-bg-tertiary: $color-gray-100;
+$color-bg-secondary: #faf9f7;
+$color-bg-tertiary: #f5f4f2;
 
 // Text colors
-$color-text-primary: $color-gray-900;
-$color-text-secondary: $color-gray-600;
-$color-text-tertiary: $color-gray-400;
+$color-text-primary: #1c1917;
+$color-text-secondary: #57534e;
+$color-text-tertiary: #a8a29e;
 $color-text-inverse: #ffffff;
 
 // Border colors
-$color-border: $color-gray-200;
-$color-border-light: $color-gray-100;
+$color-border: #e8e6e3;
+$color-border-light: #f5f4f2;
+
+// Message colors
+$color-user-bubble: #f5f4f2;
+$color-assistant-bubble: transparent;
 
 // =============================================================================
 // Typography

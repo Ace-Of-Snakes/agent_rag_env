@@ -86,6 +86,10 @@ async function apiFetch<T>(
 // Chat API
 // =============================================================================
 
+export interface UpdateChatRequest {
+  title?: string;
+}
+
 export const chatApi = {
   list: (page = 1, pageSize = 20): Promise<ChatListResponse> =>
     apiFetch(API_ENDPOINTS.CHATS, {
@@ -99,6 +103,18 @@ export const chatApi = {
     apiFetch(API_ENDPOINTS.CHATS, {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: UpdateChatRequest): Promise<Chat> =>
+    apiFetch(API_ENDPOINTS.CHAT(id), {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  updateTitle: (id: string, title: string): Promise<Chat> =>
+    apiFetch(API_ENDPOINTS.CHAT(id), {
+      method: 'PATCH',
+      body: JSON.stringify({ title }),
     }),
 
   delete: (id: string): Promise<void> =>

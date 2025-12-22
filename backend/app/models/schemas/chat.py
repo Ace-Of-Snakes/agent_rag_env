@@ -65,11 +65,11 @@ class ChatCreate(BaseModel):
     settings: Optional[Dict[str, Any]] = None
 
 
-class ChatUpdate(BaseModel):
-    """Schema for updating chat properties."""
+# class ChatUpdate(BaseModel):
+#     """Schema for updating chat properties."""
     
-    title: Optional[str] = None
-    settings: Optional[Dict[str, Any]] = None
+#     title: Optional[str] = None
+#     settings: Optional[Dict[str, Any]] = None
 
 
 class ChatResponse(BaseModel):
@@ -170,3 +170,12 @@ class ConversationHistory(BaseModel):
     total_tokens: int
     truncated: bool = False
     summary_used: bool = False
+
+# =============================================================================
+# Request/Response Models
+# =============================================================================
+
+class ChatUpdate(BaseModel):
+    """Request model for updating a chat."""
+    title: Optional[str] = None
+

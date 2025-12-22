@@ -120,6 +120,46 @@ class ChatService:
             async with get_db_session() as session:
                 return await execute(session)
     
+    async def update_chat(
+        self,
+        chat_id: uuid.UUID,
+        title: Optional[str] = None,
+        session: Optional[AsyncSession] = None
+    ) -> Chat:
+        """
+        Update a chat's properties.
+        
+        Args:
+            chat_id: Chat identifier
+            title: New title (if provided)
+            session: Database session
+            
+        Returns:
+            Updated Chat object
+        """
+        async def execute(session: AsyncSession) -> Chat:
+            chat = await self.get_chat(chat_id, session)
+            
+            if title is not None:
+                chat.title = title
+            
+            await session.commit()
+            await session.refresh(chat)
+            
+            logger.info(
+                "Chat updated",
+                chat_id=str(chat_id),
+                title=title
+            )
+            
+            return chat
+        
+        if session:
+            return await execute(session)
+        else:
+            async with get_db_session() as session:
+                return await execute(session)
+
     async def get_messages(
         self,
         chat_id: uuid.UUID,

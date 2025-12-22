@@ -45,33 +45,35 @@ export function MessageList({
 
   return (
     <div className="message-list">
-      {messages.map((message) => (
-        <MessageBubble key={message.id} message={message} />
-      ))}
-      
-      {isStreaming && streamingContent && (
-        <MessageBubble
-          message={{
-            id: 'streaming',
-            chat_id: '',
-            parent_id: null,
-            branch: 'main',
-            role: 'assistant',
-            message_type: 'text',
-            content: streamingContent,
-            token_count: null,
-            tool_name: null,
-            tool_params: null,
-            attachments: null,
-            sources: null,
-            metadata: null,
-            created_at: new Date().toISOString(),
-          }}
-          isStreaming
-        />
-      )}
-      
-      <div ref={bottomRef} />
+      <div className="message-list__container">
+        {messages.map((message) => (
+          <MessageBubble key={message.id} message={message} />
+        ))}
+        
+        {isStreaming && streamingContent && (
+          <MessageBubble
+            message={{
+              id: 'streaming',
+              chat_id: '',
+              parent_id: null,
+              branch: 'main',
+              role: 'assistant',
+              message_type: 'text',
+              content: streamingContent,
+              token_count: null,
+              tool_name: null,
+              tool_params: null,
+              attachments: null,
+              sources: null,
+              metadata: null,
+              created_at: new Date().toISOString(),
+            }}
+            isStreaming
+          />
+        )}
+        
+        <div ref={bottomRef} />
+      </div>
     </div>
   );
 }
