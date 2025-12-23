@@ -1,12 +1,17 @@
 """
-Vector search service using pgvector.
+Vector search service using pgvector with SQLAlchemy ORM.
+
+This implementation uses pgvector's native SQLAlchemy operators instead of raw SQL,
+which avoids parameter binding issues with asyncpg and provides better type safety.
 """
 
+import time
 import uuid
 from dataclasses import dataclass
 from typing import List, Optional
 
-from sqlalchemy import select, text
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import select, func, and_, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -44,7 +49,7 @@ class SearchResponse:
 
 
 class VectorSearchService:
-    """Service for semantic vector search."""
+    """Service for semantic vector search using pgvector."""
     
     def __init__(self):
         self._settings = get_settings()
@@ -63,14 +68,13 @@ class VectorSearchService:
         Args:
             query: Search query text
             top_k: Number of results to return
-            min_similarity: Minimum similarity threshold
+            min_similarity: Minimum similarity threshold (0-1)
             document_ids: Filter to specific documents
             session: Database session (creates one if not provided)
             
         Returns:
             SearchResponse with ranked results
         """
-        import time
         start_time = time.time()
         
         settings = self._settings.search
@@ -81,48 +85,44 @@ class VectorSearchService:
         query_embedding = await embedding_service.embed_text(query)
         
         async def execute_search(session: AsyncSession) -> List[SearchResult]:
-            # Build the query using pgvector's cosine distance
-            # Lower distance = higher similarity
-            # similarity = 1 - distance
+            # Use pgvector's cosine_distance operator
+            # cosine_distance returns 0 for identical vectors, 2 for opposite
+            # similarity = 1 - distance gives us 1 for identical, -1 for opposite
+            distance = Chunk.embedding.cosine_distance(query_embedding)
+            similarity = (literal(1) - distance).label('similarity')
             
-            embedding_str = f"[{','.join(str(x) for x in query_embedding)}]"
+            # Build the query using SQLAlchemy ORM
+            stmt = (
+                select(
+                    Chunk.id.label('chunk_id'),
+                    Chunk.document_id,
+                    Document.filename.label('document_filename'),
+                    Chunk.content,
+                    Chunk.page_number,
+                    Chunk.chunk_metadata.label('metadata'),
+                    similarity
+                )
+                .join(Document, Chunk.document_id == Document.id)
+                .where(
+                    and_(
+                        Chunk.embedding.isnot(None),
+                        Document.is_deleted == False,
+                        Document.status == 'completed',
+                    )
+                )
+                .order_by(distance)  # Order by distance (ascending = most similar first)
+                .limit(top_k)
+            )
             
-            # Base query with similarity calculation
-            query_sql = text("""
-                SELECT 
-                    c.id as chunk_id,
-                    c.document_id,
-                    d.filename as document_filename,
-                    c.content,
-                    c.page_number,
-                    c.metadata,
-                    1 - (c.embedding <=> :embedding::vector) as similarity
-                FROM chunks c
-                JOIN documents d ON c.document_id = d.id
-                WHERE 
-                    c.embedding IS NOT NULL
-                    AND d.is_deleted = false
-                    AND d.status = 'completed'
-                    AND 1 - (c.embedding <=> :embedding::vector) >= :min_similarity
-                    {document_filter}
-                ORDER BY c.embedding <=> :embedding::vector
-                LIMIT :top_k
-            """.format(
-                document_filter="AND c.document_id = ANY(:document_ids)" if document_ids else ""
-            ))
-            
-            params = {
-                "embedding": embedding_str,
-                "min_similarity": min_similarity,
-                "top_k": top_k,
-            }
-            
+            # Add document filter if specified
             if document_ids:
-                params["document_ids"] = [str(did) for did in document_ids]
+                stmt = stmt.where(Chunk.document_id.in_(document_ids))
             
-            result = await session.execute(query_sql, params)
+            result = await session.execute(stmt)
             rows = result.fetchall()
             
+            # Filter by minimum similarity in Python to avoid complex SQL expressions
+            # (pgvector distance operators in WHERE clauses can be tricky)
             return [
                 SearchResult(
                     chunk_id=row.chunk_id,
@@ -134,6 +134,7 @@ class VectorSearchService:
                     metadata=row.metadata
                 )
                 for row in rows
+                if float(row.similarity) >= min_similarity
             ]
         
         try:
@@ -169,16 +170,29 @@ class VectorSearchService:
         top_k: Optional[int] = None,
         min_similarity: Optional[float] = None,
         document_ids: Optional[List[uuid.UUID]] = None,
+        vector_weight: float = 0.7,
+        text_weight: float = 0.3,
         session: Optional[AsyncSession] = None
     ) -> SearchResponse:
         """
-        Hybrid search combining vector similarity and keyword matching.
+        Hybrid search combining vector similarity and full-text search.
         
         Uses weighted combination of:
-        - Vector similarity (cosine)
-        - Full-text search (tsvector)
+        - Vector similarity (cosine distance)
+        - Full-text search (ts_rank)
+        
+        Args:
+            query: Search query text
+            top_k: Number of results to return
+            min_similarity: Minimum similarity threshold
+            document_ids: Filter to specific documents
+            vector_weight: Weight for vector similarity (0-1)
+            text_weight: Weight for text search (0-1)
+            session: Database session
+            
+        Returns:
+            SearchResponse with ranked results
         """
-        import time
         start_time = time.time()
         
         settings = self._settings.search
@@ -189,64 +203,53 @@ class VectorSearchService:
         query_embedding = await embedding_service.embed_text(query)
         
         async def execute_search(session: AsyncSession) -> List[SearchResult]:
-            embedding_str = f"[{','.join(str(x) for x in query_embedding)}]"
+            # Vector similarity score
+            distance = Chunk.embedding.cosine_distance(query_embedding)
+            vector_score = (literal(1) - distance).label('vector_score')
             
-            # Hybrid query combining vector and text search
-            query_sql = text("""
-                WITH vector_results AS (
-                    SELECT 
-                        c.id,
-                        c.document_id,
-                        c.content,
-                        c.page_number,
-                        c.metadata,
-                        1 - (c.embedding <=> :embedding::vector) as vector_score
-                    FROM chunks c
-                    JOIN documents d ON c.document_id = d.id
-                    WHERE 
-                        c.embedding IS NOT NULL
-                        AND d.is_deleted = false
-                        AND d.status = 'completed'
-                        {document_filter}
-                ),
-                text_results AS (
-                    SELECT 
-                        c.id,
-                        ts_rank(c.search_vector, plainto_tsquery(:query)) as text_score
-                    FROM chunks c
-                    WHERE c.search_vector IS NOT NULL
+            # Full-text search score using ts_rank
+            ts_query = func.plainto_tsquery('english', query)
+            text_score = func.coalesce(
+                func.ts_rank(Chunk.search_vector, ts_query),
+                literal(0)
+            ).label('text_score')
+            
+            # Combined score with weights
+            combined_score = (
+                literal(vector_weight) * (literal(1) - distance) +
+                literal(text_weight) * func.coalesce(func.ts_rank(Chunk.search_vector, ts_query), literal(0))
+            ).label('combined_score')
+            
+            # Build the query
+            stmt = (
+                select(
+                    Chunk.id.label('chunk_id'),
+                    Chunk.document_id,
+                    Document.filename.label('document_filename'),
+                    Chunk.content,
+                    Chunk.page_number,
+                    Chunk.chunk_metadata.label('metadata'),
+                    vector_score,
+                    text_score,
+                    combined_score
                 )
-                SELECT 
-                    v.id as chunk_id,
-                    v.document_id,
-                    d.filename as document_filename,
-                    v.content,
-                    v.page_number,
-                    v.metadata,
-                    (v.vector_score * :vector_weight + COALESCE(t.text_score, 0) * :keyword_weight) as combined_score
-                FROM vector_results v
-                LEFT JOIN text_results t ON v.id = t.id
-                JOIN documents d ON v.document_id = d.id
-                WHERE v.vector_score >= :min_similarity
-                ORDER BY combined_score DESC
-                LIMIT :top_k
-            """.format(
-                document_filter="AND c.document_id = ANY(:document_ids)" if document_ids else ""
-            ))
+                .join(Document, Chunk.document_id == Document.id)
+                .where(
+                    and_(
+                        Chunk.embedding.isnot(None),
+                        Document.is_deleted == False,
+                        Document.status == 'completed',
+                    )
+                )
+                .order_by(combined_score.desc())  # Higher combined score = better
+                .limit(top_k)
+            )
             
-            params = {
-                "embedding": embedding_str,
-                "query": query,
-                "min_similarity": min_similarity,
-                "top_k": top_k,
-                "vector_weight": settings.vector_weight,
-                "keyword_weight": settings.keyword_weight,
-            }
-            
+            # Add document filter if specified
             if document_ids:
-                params["document_ids"] = [str(did) for did in document_ids]
+                stmt = stmt.where(Chunk.document_id.in_(document_ids))
             
-            result = await session.execute(query_sql, params)
+            result = await session.execute(stmt)
             rows = result.fetchall()
             
             return [
@@ -260,6 +263,7 @@ class VectorSearchService:
                     metadata=row.metadata
                 )
                 for row in rows
+                if float(row.vector_score) >= min_similarity
             ]
         
         try:
@@ -308,27 +312,29 @@ class VectorSearchService:
         query_embedding = await embedding_service.embed_text(query)
         
         async def execute_search(session: AsyncSession) -> List[dict]:
-            embedding_str = f"[{','.join(str(x) for x in query_embedding)}]"
+            # Use document summary embedding for search
+            distance = Document.summary_embedding.cosine_distance(query_embedding)
+            similarity = (literal(1) - distance).label('similarity')
             
-            query_sql = text("""
-                SELECT 
-                    id,
-                    filename,
-                    summary,
-                    1 - (summary_embedding <=> :embedding::vector) as similarity
-                FROM documents
-                WHERE 
-                    summary_embedding IS NOT NULL
-                    AND is_deleted = false
-                    AND status = 'completed'
-                ORDER BY summary_embedding <=> :embedding::vector
-                LIMIT :top_k
-            """)
+            stmt = (
+                select(
+                    Document.id,
+                    Document.filename,
+                    Document.summary,
+                    similarity
+                )
+                .where(
+                    and_(
+                        Document.summary_embedding.isnot(None),
+                        Document.is_deleted == False,
+                        Document.status == 'completed',
+                    )
+                )
+                .order_by(distance)
+                .limit(top_k)
+            )
             
-            result = await session.execute(query_sql, {
-                "embedding": embedding_str,
-                "top_k": top_k
-            })
+            result = await session.execute(stmt)
             
             return [
                 {

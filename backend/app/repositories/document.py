@@ -5,7 +5,7 @@ Document repository for document-related database operations.
 import uuid
 from typing import List, Optional
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import Document, DocumentStatus
@@ -201,27 +201,30 @@ class DocumentRepository(BaseRepository[Document]):
         """
         Search documents by summary embedding similarity.
         
+        Uses pgvector's native SQLAlchemy operators for clean parameter handling.
+        
         Args:
             query_embedding: Query vector
             limit: Maximum results
             
         Returns:
-            List of matching documents
+            List of matching documents ordered by similarity
         """
-        from sqlalchemy import text
+        # Calculate cosine distance using pgvector operators
+        distance = Document.summary_embedding.cosine_distance(query_embedding)
         
-        embedding_str = f"[{','.join(str(x) for x in query_embedding)}]"
-        
-        result = await self.session.execute(
-            text("""
-                SELECT * FROM documents
-                WHERE summary_embedding IS NOT NULL
-                AND is_deleted = false
-                AND status = 'completed'
-                ORDER BY summary_embedding <=> :embedding::vector
-                LIMIT :limit
-            """),
-            {"embedding": embedding_str, "limit": limit}
+        stmt = (
+            select(Document)
+            .where(
+                and_(
+                    Document.summary_embedding.isnot(None),
+                    Document.is_deleted == False,
+                    Document.status == 'completed',
+                )
+            )
+            .order_by(distance)  # Ascending = most similar first
+            .limit(limit)
         )
         
-        return list(result.fetchall())
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())

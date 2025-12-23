@@ -5,10 +5,10 @@ Chunk repository for chunk-related database operations.
 import uuid
 from typing import List, Optional
 
-from sqlalchemy import select, func, text
+from sqlalchemy import select, func, text, and_, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Chunk
+from app.models.domain import Chunk, Document
 from app.repositories.base import BaseRepository
 
 
@@ -126,56 +126,55 @@ class ChunkRepository(BaseRepository[Chunk]):
         """
         Search for similar chunks using vector similarity.
         
+        Uses pgvector's native SQLAlchemy operators for clean parameter handling.
+        
         Args:
             query_embedding: Query vector
             limit: Maximum results
-            min_similarity: Minimum similarity threshold
+            min_similarity: Minimum similarity threshold (0-1)
             document_ids: Optional filter to specific documents
             
         Returns:
             List of results with chunk info and similarity
         """
-        embedding_str = f"[{','.join(str(x) for x in query_embedding)}]"
+        # Calculate cosine distance and similarity using pgvector operators
+        distance = Chunk.embedding.cosine_distance(query_embedding)
+        similarity = (literal(1) - distance).label('similarity')
         
-        doc_filter = ""
-        params = {
-            "embedding": embedding_str,
-            "min_similarity": min_similarity,
-            "limit": limit
-        }
-        
-        if document_ids:
-            doc_filter = "AND c.document_id = ANY(:document_ids)"
-            params["document_ids"] = [str(did) for did in document_ids]
-        
-        result = await self.session.execute(
-            text(f"""
-                SELECT 
-                    c.id,
-                    c.document_id,
-                    c.content,
-                    c.page_number,
-                    c.chunk_index,
-                    c.content_type,
-                    c.metadata,
-                    d.filename,
-                    d.original_filename,
-                    1 - (c.embedding <=> :embedding::vector) as similarity
-                FROM chunks c
-                JOIN documents d ON c.document_id = d.id
-                WHERE 
-                    c.embedding IS NOT NULL
-                    AND d.is_deleted = false
-                    AND d.status = 'completed'
-                    AND 1 - (c.embedding <=> :embedding::vector) >= :min_similarity
-                    {doc_filter}
-                ORDER BY c.embedding <=> :embedding::vector
-                LIMIT :limit
-            """),
-            params
+        # Build the query using SQLAlchemy ORM
+        stmt = (
+            select(
+                Chunk.id,
+                Chunk.document_id,
+                Chunk.content,
+                Chunk.page_number,
+                Chunk.chunk_index,
+                Chunk.content_type,
+                Chunk.chunk_metadata.label('metadata'),
+                Document.filename,
+                Document.original_filename,
+                similarity
+            )
+            .join(Document, Chunk.document_id == Document.id)
+            .where(
+                and_(
+                    Chunk.embedding.isnot(None),
+                    Document.is_deleted == False,
+                    Document.status == 'completed',
+                )
+            )
+            .order_by(distance)  # Ascending = most similar first
+            .limit(limit)
         )
         
+        # Add document filter if specified
+        if document_ids:
+            stmt = stmt.where(Chunk.document_id.in_(document_ids))
+        
+        result = await self.session.execute(stmt)
         rows = result.fetchall()
+        
+        # Filter by minimum similarity and build result list
         return [
             {
                 "chunk_id": row.id,
@@ -190,6 +189,7 @@ class ChunkRepository(BaseRepository[Chunk]):
                 "similarity": float(row.similarity)
             }
             for row in rows
+            if float(row.similarity) >= min_similarity
         ]
     
     async def update_embedding(
