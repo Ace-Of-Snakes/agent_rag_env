@@ -198,3 +198,41 @@ export interface CreateBranchRequest {
 export interface SwitchBranchRequest {
   branch_name: string;
 }
+
+
+export interface Source {
+  document: string;
+  page: number | null;
+  content_preview: string;
+  chunk_id?: string;
+  similarity?: number;
+  url?: string;
+  index?: number;
+}
+
+/**
+ * Sources can come from the backend in different formats.
+ * Use this type for raw source data before normalization.
+ */
+export interface RawSource {
+  // From RAG tool
+  document?: string;
+  document_filename?: string;
+  page?: number | null;
+  page_number?: number | null;
+  content_preview?: string;
+  content?: string;
+  chunk_id?: string;
+  similarity?: number;
+  similarity_score?: number;
+  index?: number;
+}
+
+/**
+ * Backend may wrap sources in an object.
+ */
+export interface SourcesWrapper {
+  sources: RawSource[];
+}
+
+

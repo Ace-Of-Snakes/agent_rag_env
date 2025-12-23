@@ -1,5 +1,7 @@
 """
 Agent orchestrator that manages tool execution and response generation.
+
+FIXED: Source extraction now correctly pulls from result.metadata["sources"]
 """
 
 import json
@@ -80,41 +82,33 @@ class AgentOrchestrator:
         Process a user message and return the agent's response.
         
         Args:
-            user_message: The user's message
+            user_message: The user's input
             conversation_history: Previous messages in the conversation
-            attached_files: Any files attached to the message
+            attached_files: Optional file attachments
             
         Returns:
-            AgentResponse with final response and metadata
+            AgentResponse with the response and metadata
         """
         start_time = time.time()
         
         # Get available tools
         tools = tool_registry.get_all_definitions()
-        
-        # Build system prompt with tools
         system_prompt = build_agent_prompt([t.to_dict() for t in tools])
         
-        # Prepare context (may truncate or summarize history)
-        prepared_history, _, _ = await history_manager.prepare_context(
+        # Prepare conversation history
+        prepared_history, was_summarized, summary = await history_manager.prepare_context(
             conversation_history
         )
         
-        # Add user message
+        # Build messages list
         messages = prepared_history + [{"role": "user", "content": user_message}]
         
+        # Track state
         thoughts = []
         tool_results = []
         sources = []
         
-        # Think-act loop
         for iteration in range(self._max_iterations):
-            logger.debug(
-                "Agent iteration",
-                iteration=iteration + 1,
-                max=self._max_iterations
-            )
-            
             # Get LLM response
             response_text = await text_service.chat(
                 messages=messages,
@@ -155,14 +149,14 @@ class AgentOrchestrator:
                         "success": result.success
                     })
                     
-                    # Collect sources from RAG results
-                    if thought.action == AgentConstants.TOOL_RAG_SEARCH and result.success:
-                        sources.extend(self._extract_sources(result.result))
+                    # FIXED: Extract sources from result.metadata, not result.result
+                    if result.success and result.metadata.get("sources"):
+                        sources.extend(self._normalize_sources(result.metadata["sources"]))
                     
                     # Add tool result to conversation
                     tool_message = build_tool_result_prompt(
                         thought.action,
-                        json.dumps(result.result) if result.success else result.error
+                        result.result if result.success else result.error
                     )
                     messages.append({"role": "assistant", "content": response_text})
                     messages.append({"role": "user", "content": tool_message})
@@ -229,21 +223,23 @@ class AgentOrchestrator:
                 data={"thought": thought.thought, "action": thought.action}
             )
             
-            # Direct response
+            # Check if done
             if thought.action == "respond" or thought.response:
+                execution_time = (time.time() - start_time) * 1000
+                
                 yield StreamEvent(
                     event=APIConstants.SSE_EVENT_DONE,
                     data={
                         "response": thought.response or response_text,
                         "sources": sources,
                         "iterations": iteration + 1,
-                        "execution_time_ms": (time.time() - start_time) * 1000
+                        "execution_time_ms": execution_time
                     }
                 )
                 return
             
             # Execute tool
-            if thought.action:
+            if thought.action and thought.action != "respond":
                 yield StreamEvent(
                     event=APIConstants.SSE_EVENT_TOOL_START,
                     data={"tool": thought.action, "input": thought.action_input}
@@ -255,34 +251,39 @@ class AgentOrchestrator:
                         thought.action_input or {}
                     )
                     
+                    # FIXED: Extract sources from result.metadata
+                    if result.success and result.metadata.get("sources"):
+                        sources.extend(self._normalize_sources(result.metadata["sources"]))
+                    
                     yield StreamEvent(
                         event=APIConstants.SSE_EVENT_TOOL_END,
                         data={
                             "tool": thought.action,
                             "success": result.success,
-                            "result_preview": str(result.result)[:200] if result.success else result.error
+                            "result_preview": str(result.result)[:200] if result.result else None
                         }
                     )
                     
-                    if thought.action == AgentConstants.TOOL_RAG_SEARCH and result.success:
-                        sources.extend(self._extract_sources(result.result))
-                    
+                    # Add tool result to conversation
                     tool_message = build_tool_result_prompt(
                         thought.action,
-                        json.dumps(result.result) if result.success else result.error
+                        result.result if result.success else result.error
                     )
                     messages.append({"role": "assistant", "content": response_text})
                     messages.append({"role": "user", "content": tool_message})
                     
                 except Exception as e:
+                    logger.error("Tool execution failed", tool=thought.action, error=str(e))
+                    
                     yield StreamEvent(
-                        event=APIConstants.SSE_EVENT_ERROR,
-                        data={"tool": thought.action, "error": str(e)}
+                        event=APIConstants.SSE_EVENT_TOOL_END,
+                        data={"tool": thought.action, "success": False, "error": str(e)}
                     )
+                    
                     messages.append({"role": "assistant", "content": response_text})
                     messages.append({
                         "role": "user",
-                        "content": f"Tool failed: {str(e)}. Try another approach."
+                        "content": f"Tool '{thought.action}' failed: {str(e)}. Try another approach."
                     })
         
         yield StreamEvent(
@@ -354,9 +355,41 @@ class AgentOrchestrator:
             response=response_text
         )
     
+    def _normalize_sources(self, raw_sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Normalize sources to a consistent format for the frontend.
+        
+        Handles both RAG sources and web search sources.
+        """
+        normalized = []
+        
+        for src in raw_sources:
+            normalized_src = {
+                "index": src.get("index"),
+                "document": src.get("document") or src.get("title") or "Unknown",
+                "page": src.get("page"),
+                "chunk_id": src.get("chunk_id"),
+                "similarity": src.get("similarity"),
+                "url": src.get("url"),  # For web search
+                "content_preview": src.get("content_preview", "")
+            }
+            # Remove None values
+            normalized_src = {k: v for k, v in normalized_src.items() if v is not None}
+            normalized.append(normalized_src)
+        
+        return normalized
+    
     def _extract_sources(self, rag_result: Any) -> List[Dict[str, Any]]:
-        """Extract source citations from RAG results."""
+        """
+        DEPRECATED: Use _normalize_sources with result.metadata["sources"] instead.
+        
+        Extract source citations from RAG results.
+        Kept for backwards compatibility.
+        """
         sources = []
+        
+        if isinstance(rag_result, dict) and "sources" in rag_result:
+            return self._normalize_sources(rag_result["sources"])
         
         if isinstance(rag_result, dict) and "results" in rag_result:
             for r in rag_result["results"]:

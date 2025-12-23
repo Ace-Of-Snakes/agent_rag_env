@@ -1,5 +1,7 @@
 """
 Agent prompts for system and tool routing.
+
+Updated with stronger citation instructions.
 """
 
 # =============================================================================
@@ -15,9 +17,16 @@ Your capabilities:
 
 When answering questions:
 - Draw on relevant information from available sources
-- Cite your sources clearly (document name, page number, or URL)
+- **Always cite your sources** using the format [Source N] where N matches the source number from search results
 - Be accurate and acknowledge when you don't have enough information
 - Be conversational but informative
+
+## Citation Rules
+When you use information from the document search (rag_search), you MUST cite it:
+- Use [Source 1], [Source 2], etc. matching the source numbers in the search results
+- Place citations immediately after the relevant claim or quote
+- Example: "The project deadline is December 15th [Source 1]."
+- If multiple sources support a claim, cite all of them: "Revenue increased by 20% [Source 1, Source 3]."
 
 You have access to the following tools:
 {tool_definitions}
@@ -54,7 +63,10 @@ Based on this information, please continue. You can:
 1. Use another tool if you need more information
 2. Respond to the user with your answer
 
-Remember to cite your sources in your response."""
+IMPORTANT: If you used rag_search, cite your sources using [Source N] notation in your response.
+For example: "According to the documentation, the API rate limit is 100 requests per minute [Source 1]."
+
+Remember to cite your sources clearly in your response."""
 
 
 # =============================================================================
@@ -88,10 +100,15 @@ Tool results:
 
 Guidelines:
 - Synthesize information from multiple sources if available
-- Cite sources clearly (e.g., "According to document.pdf, page 3...")
+- **Cite sources using [Source N] notation** (e.g., "According to the quarterly report [Source 1]...")
 - If sources conflict, acknowledge the discrepancy
 - If you couldn't find relevant information, say so honestly
-- Be conversational and helpful"""
+- Be conversational and helpful
+
+Example with citations:
+"The company's revenue grew by 15% in Q3 [Source 1]. This was primarily driven by expansion into new markets [Source 2], 
+though some analysts have noted concerns about sustainability [Source 1]."
+"""
 
 
 # =============================================================================

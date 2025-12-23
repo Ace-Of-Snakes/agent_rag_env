@@ -194,6 +194,7 @@
     vertical-align: text-bottom;
   }
   
+  // Legacy sources style (inline chips)
   &__sources {
     display: flex;
     flex-wrap: wrap;
@@ -220,6 +221,102 @@
     &:hover {
       background: $color-border;
     }
+  }
+}
+
+// =============================================================================
+// Sources Panel (detailed view below assistant messages)
+// =============================================================================
+
+.sources-panel {
+  margin-top: $spacing-3;
+  padding: $spacing-3;
+  background: $color-bg-tertiary;
+  border-radius: $border-radius-md;
+  font-size: $font-size-xs;
+  
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-2;
+    color: $color-text-secondary;
+    font-weight: $font-weight-medium;
+    margin-bottom: $spacing-2;
+    padding-bottom: $spacing-2;
+    border-bottom: 1px solid $color-border;
+  }
+  
+  &__icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+  
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-1;
+  }
+}
+
+.source-citation {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  padding: $spacing-1 0;
+  color: $color-text-secondary;
+  flex-wrap: wrap;
+  
+  &:hover {
+    color: $color-text-primary;
+  }
+  
+  &__index {
+    font-weight: $font-weight-semibold;
+    color: $color-primary;
+    min-width: 1.25rem;
+  }
+  
+  &__document {
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+  }
+  
+  &__link {
+    font-weight: $font-weight-medium;
+    color: $color-primary;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+  
+  &__page {
+    color: $color-text-tertiary;
+    flex-shrink: 0;
+    
+    &::before {
+      content: '•';
+      margin-right: $spacing-1;
+    }
+  }
+  
+  &__similarity {
+    color: $color-text-tertiary;
+    background: $color-bg-secondary;
+    padding: 2px $spacing-2;
+    border-radius: $border-radius-sm;
+    flex-shrink: 0;
+    font-size: 10px;
   }
 }
 

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { CodeBlock } from '../CodeBlock/CodeBlock';
-import type { Message } from '@/types';
+import type { Message, Source } from '@/types';
 import './MessageBubble.scss';
 
 interface MessageBubbleProps {
@@ -19,7 +19,6 @@ function parseContent(content: string): string {
   const trimmed = content.trim();
   
   // Check if the entire content is wrapped in a JSON code block
-  // Pattern: ```json\n{...}\n``` or ```\n{...}\n```
   const jsonCodeBlockRegex = /^```(?:json)?\s*\n([\s\S]+)\n```\s*$/;
   const jsonCodeBlockMatch = trimmed.match(jsonCodeBlockRegex);
   
@@ -35,17 +34,14 @@ function parseContent(content: string): string {
     }
   }
   
-  // Check if it's raw JSON (starts with { and ends with })
+  // Check if it's raw JSON
   if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
     try {
       const parsed = JSON.parse(trimmed);
-      // Check if it's an agent response with thought/action/response structure
       if (typeof parsed === 'object' && parsed !== null) {
-        // Return the response field if it exists
         if ('response' in parsed && typeof parsed.response === 'string') {
           return parsed.response;
         }
-        // Sometimes the actual content might be in a message field
         if ('message' in parsed && typeof parsed.message === 'string') {
           return parsed.message;
         }
@@ -56,7 +52,6 @@ function parseContent(content: string): string {
   }
   
   // Check for JSON at the start followed by other content
-  // This handles cases where the LLM outputs JSON and then continues
   const jsonStartMatch = trimmed.match(/^```(?:json)?\s*\n(\{[\s\S]*?\})\n```/);
   if (jsonStartMatch) {
     try {
@@ -72,6 +67,101 @@ function parseContent(content: string): string {
   return content;
 }
 
+/**
+ * Normalize sources from various formats the backend might send.
+ */
+function normalizeSources(sources: unknown): Source[] {
+  if (!sources) return [];
+  
+  // Handle {sources: [...]} wrapper from backend
+  if (typeof sources === 'object' && sources !== null && 'sources' in sources) {
+    const wrapper = sources as { sources: unknown };
+    return normalizeSources(wrapper.sources);
+  }
+  
+  // Handle direct array
+  if (Array.isArray(sources)) {
+    return sources
+      .filter((s) => s && typeof s === 'object')
+      .map((s, idx) => ({
+        document: s.document || s.document_filename || s.title || 'Unknown',
+        page: s.page ?? s.page_number ?? null,
+        content_preview: s.content_preview || (s.content ? s.content.slice(0, 150) : ''),
+        chunk_id: s.chunk_id,
+        similarity: s.similarity ?? s.similarity_score,
+        url: s.url,
+        index: s.index ?? idx + 1,
+      }));
+  }
+  
+  return [];
+}
+
+/**
+ * Source citation component
+ */
+function SourceCitation({ source }: { source: Source }) {
+  const isWebSource = !!source.url;
+  
+  return (
+    <div className="source-citation">
+      <span className="source-citation__index">[{source.index}]</span>
+      {isWebSource ? (
+        <a 
+          href={source.url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="source-citation__link"
+        >
+          {source.document}
+        </a>
+      ) : (
+        <span className="source-citation__document">{source.document}</span>
+      )}
+      {source.page && (
+        <span className="source-citation__page">p. {source.page}</span>
+      )}
+      {source.similarity && (
+        <span className="source-citation__similarity">
+          {Math.round(source.similarity * 100)}%
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Sources panel component
+ */
+function SourcesPanel({ sources }: { sources: Source[] }) {
+  if (sources.length === 0) return null;
+  
+  return (
+    <div className="sources-panel">
+      <div className="sources-panel__header">
+        <svg 
+          className="sources-panel__icon" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2"
+        >
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14,2 14,8 20,8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+        </svg>
+        <span>Sources ({sources.length})</span>
+      </div>
+      <div className="sources-panel__list">
+        {sources.map((source, idx) => (
+          <SourceCitation key={source.chunk_id || `source-${idx}`} source={source} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
@@ -83,6 +173,11 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
     }
     return message.content;
   }, [message.content, isAssistant]);
+
+  // Normalize sources
+  const sources = useMemo(() => {
+    return normalizeSources(message.sources);
+  }, [message.sources]);
 
   return (
     <div className={`message ${isUser ? 'message--user' : 'message--assistant'}`}>
@@ -100,105 +195,40 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
       
       <div className="message__content">
         <div className="message__bubble">
-          {isAssistant ? (
-            <ReactMarkdown
-              components={{
-                // Handle code blocks
-                pre: ({ children }) => {
-                  return <>{children}</>;
-                },
-                code: ({ className, children }) => {
-                  // Check if it's a code block (has language class) or inline code
-                  const match = /language-(\w+)/.exec(className || '');
-                  const codeContent = String(children).replace(/\n$/, '');
-                  
-                  // If it has a language class or is multiline, treat as code block
-                  const isCodeBlock = match || codeContent.includes('\n');
-                  
-                  if (isCodeBlock) {
-                    return (
-                      <CodeBlock 
-                        code={codeContent}
-                        language={match ? match[1] : undefined}
-                      />
-                    );
-                  }
-                  
-                  // Inline code
+          <ReactMarkdown
+            components={{
+              code({ node, className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || '');
+                const isInline = !match && !String(children).includes('\n');
+                
+                if (isInline) {
                   return (
-                    <CodeBlock 
-                      code={codeContent}
-                      inline
-                    />
+                    <code className="inline-code" {...props}>
+                      {children}
+                    </code>
                   );
-                },
-                // Style paragraphs
-                p: ({ children }) => (
-                  <p className="message__paragraph">{children}</p>
-                ),
-                // Style lists
-                ul: ({ children }) => (
-                  <ul className="message__list message__list--unordered">{children}</ul>
-                ),
-                ol: ({ children }) => (
-                  <ol className="message__list message__list--ordered">{children}</ol>
-                ),
-                li: ({ children }) => (
-                  <li className="message__list-item">{children}</li>
-                ),
-                // Style headings
-                h1: ({ children }) => (
-                  <h1 className="message__heading message__heading--1">{children}</h1>
-                ),
-                h2: ({ children }) => (
-                  <h2 className="message__heading message__heading--2">{children}</h2>
-                ),
-                h3: ({ children }) => (
-                  <h3 className="message__heading message__heading--3">{children}</h3>
-                ),
-                // Style links
-                a: ({ href, children }) => (
-                  <a href={href} className="message__link" target="_blank" rel="noopener noreferrer">
-                    {children}
-                  </a>
-                ),
-                // Style blockquotes
-                blockquote: ({ children }) => (
-                  <blockquote className="message__blockquote">{children}</blockquote>
-                ),
-                // Style horizontal rules
-                hr: () => <hr className="message__hr" />,
-                // Style strong/bold
-                strong: ({ children }) => (
-                  <strong className="message__strong">{children}</strong>
-                ),
-                // Style emphasis/italic
-                em: ({ children }) => (
-                  <em className="message__em">{children}</em>
-                ),
-              }}
-            >
-              {displayContent}
-            </ReactMarkdown>
-          ) : (
-            <p>{displayContent}</p>
-          )}
+                }
+                
+                return (
+                  <CodeBlock
+                    language={match ? match[1] : 'text'}
+                    code={String(children).replace(/\n$/, '')}
+                  />
+                );
+              },
+            }}
+          >
+            {displayContent}
+          </ReactMarkdown>
           
           {isStreaming && (
             <span className="message__cursor" />
           )}
         </div>
         
-        {message.sources && message.sources.length > 0 && (
-          <div className="message__sources">
-            <span className="message__sources-label">Sources:</span>
-            {message.sources.map((source, index) => (
-              <span key={index} className="message__source">
-                {source.document}
-                {source.page && ` (p. ${source.page})`}
-              </span>
-            ))}
-          </div>
+        {/* Show sources for assistant messages */}
+        {isAssistant && !isStreaming && sources.length > 0 && (
+          <SourcesPanel sources={sources} />
         )}
       </div>
     </div>
