@@ -172,7 +172,7 @@ async def _process_document(
             total_chunks=len(result.chunks)
         )
         document.summary_embedding = result.summary_embedding
-        document.metadata = result.metadata
+        document.document_metadata = result.metadata
         
         # Save chunks
         from app.models.domain import Chunk
@@ -186,7 +186,7 @@ async def _process_document(
                 content_type=chunk_data.content_type,
                 token_count=chunk_data.token_count,
                 embedding=chunk_data.embedding,
-                metadata=chunk_data.metadata
+                chunk_metadata=chunk_data.metadata
             )
             db.add(chunk)
         
@@ -349,7 +349,7 @@ async def search_documents(
                 content=r.content,
                 page_number=r.page_number,
                 similarity_score=r.similarity_score,
-                metadata=r.metadata
+                document_metadata=r.metadata
             )
             for r in response.results
         ],

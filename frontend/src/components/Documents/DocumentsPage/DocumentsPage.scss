@@ -1,0 +1,313 @@
+.documents-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: $spacing-6;
+  overflow-y: auto;
+  @include custom-scrollbar;
+
+  &__header {
+    margin-bottom: $spacing-6;
+  }
+
+  &__title {
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    margin: 0 0 $spacing-2 0;
+  }
+
+  &__subtitle {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    margin: 0;
+  }
+
+  // Upload Zone
+  &__upload {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-3;
+    padding: $spacing-8;
+    border: 2px dashed $color-border;
+    border-radius: $border-radius-xl;
+    background: $color-bg-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+    margin-bottom: $spacing-6;
+
+    &:hover {
+      border-color: $color-primary;
+      background: rgba($color-primary, 0.02);
+    }
+
+    &--dragover {
+      border-color: $color-primary;
+      background: rgba($color-primary, 0.05);
+      transform: scale(1.01);
+    }
+
+    &--uploading {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+  }
+
+  &__upload-input {
+    // Hidden - we use display:none in the component
+    // This class is kept for reference
+  }
+
+  &__upload-icon {
+    width: 48px;
+    height: 48px;
+    color: $color-text-tertiary;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__spinner {
+    animation: spin 1s linear infinite;
+  }
+
+  &__upload-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-1;
+  }
+
+  &__upload-primary {
+    font-size: $font-size-base;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+  }
+
+  &__upload-secondary {
+    font-size: $font-size-sm;
+    color: $color-text-tertiary;
+  }
+
+  // Document List
+  &__list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  &__list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $spacing-4;
+  }
+
+  &__list-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: $spacing-2;
+  }
+
+  &__list-count {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $color-text-secondary;
+    background: $color-bg-tertiary;
+    padding: $spacing-1 $spacing-2;
+    border-radius: $border-radius-full;
+  }
+
+  &__refresh-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: $border-radius-md;
+    background: transparent;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      background: $color-bg-tertiary;
+      color: $color-text-primary;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-3;
+    padding: $spacing-12;
+    color: $color-text-tertiary;
+    text-align: center;
+
+    svg {
+      width: 48px;
+      height: 48px;
+      opacity: 0.5;
+    }
+  }
+
+  &__loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid $color-border;
+    border-top-color: $color-primary;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  &__items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-2;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-3;
+    padding: $spacing-3 $spacing-4;
+    background: $color-bg-primary;
+    border: 1px solid $color-border;
+    border-radius: $border-radius-lg;
+    transition: all $transition-fast;
+
+    &:hover {
+      border-color: $color-primary;
+      box-shadow: $shadow-sm;
+
+      .documents-page__item-delete {
+        opacity: 1;
+      }
+    }
+  }
+
+  &__item-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($color-primary, 0.1);
+    border-radius: $border-radius-md;
+    color: $color-primary;
+    flex-shrink: 0;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  &__item-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-1;
+  }
+
+  &__item-name {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+    color: $color-text-primary;
+    @include text-truncate;
+  }
+
+  &__item-meta {
+    font-size: $font-size-xs;
+    color: $color-text-tertiary;
+  }
+
+  &__item-status {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    padding: $spacing-1 $spacing-2;
+    border-radius: $border-radius-full;
+    flex-shrink: 0;
+  }
+
+  &__item-delete {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: $border-radius-md;
+    background: transparent;
+    color: $color-text-tertiary;
+    cursor: pointer;
+    opacity: 0;
+    transition: all $transition-fast;
+    flex-shrink: 0;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      background: rgba($color-error, 0.1);
+      color: $color-error;
+    }
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Responsive
+@media (max-width: $breakpoint-md) {
+  .documents-page {
+    padding: $spacing-4;
+
+    &__upload {
+      padding: $spacing-6;
+    }
+
+    &__item-status {
+      display: none;
+    }
+
+    &__item-delete {
+      opacity: 1;
+    }
+  }
+}

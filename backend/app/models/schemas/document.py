@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 from app.models.domain.document import DocumentStatus
 
@@ -55,7 +55,7 @@ class ChunkResponse(BaseModel):
     content: str
     content_type: str
     token_count: Optional[int] = None
-    metadata: Optional[Dict[str, Any]] = None
+    chunk_metadata: Optional[Dict[str, Any]] = None
 
 
 class DocumentResponse(BaseModel):
@@ -73,7 +73,8 @@ class DocumentResponse(BaseModel):
     page_count: Optional[int] = None
     total_chunks: int = 0
     summary: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    # Map from document_metadata in the model
+    document_metadata: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: datetime
     processing_started_at: Optional[datetime] = None

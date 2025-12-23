@@ -1,73 +1,187 @@
+$rail-width: 60px;
+
 .sidebar {
-  width: $sidebar-width;
+  display: flex;
   height: 100%;
   background: $color-bg-secondary;
   border-right: 1px solid $color-border;
-  display: flex;
-  flex-direction: column;
   flex-shrink: 0;
-  transition: width $transition-normal, transform $transition-normal, opacity $transition-normal;
+  transition: width $transition-normal;
   overflow: hidden;
-  
-  // Closed state - collapse width to 0
-  &:not(.sidebar--open) {
-    width: 0;
-    border-right: none;
-    
-    .sidebar__header,
-    .sidebar__chats {
+
+  // Collapsed state - only show rail
+  &--collapsed {
+    width: $rail-width;
+
+    .sidebar__panel {
+      width: 0;
       opacity: 0;
       pointer-events: none;
+      overflow: hidden;
     }
   }
-  
+
+  // Open state - show rail + panel
   &--open {
-    width: $sidebar-width;
-    
-    .sidebar__header,
-    .sidebar__chats {
+    width: $sidebar-width + $rail-width;
+
+    .sidebar__panel {
+      width: $sidebar-width;
       opacity: 1;
       pointer-events: auto;
     }
   }
-  
+
+  // Icon Rail - Always visible
+  &__rail {
+    width: $rail-width;
+    min-width: $rail-width;
+    height: 100%;
+    background: $color-bg-tertiary;
+    border-right: 1px solid $color-border;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: $spacing-3 0;
+    gap: $spacing-4;
+  }
+
+  &__rail-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: $border-radius-lg;
+    background: $color-primary;
+    color: $color-text-inverse;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-bold;
+  }
+
+  &__rail-nav {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-2;
+    margin-top: $spacing-4;
+  }
+
+  &__rail-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: $border-radius-md;
+    background: transparent;
+    color: $color-text-secondary;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all $transition-fast;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    &:hover {
+      background: $color-bg-secondary;
+      color: $color-text-primary;
+    }
+
+    &.active {
+      background: $color-primary;
+      color: $color-text-inverse;
+
+      &:hover {
+        background: $color-primary-dark;
+      }
+    }
+  }
+
+  // Expandable Panel
+  &__panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width $transition-normal, opacity $transition-normal;
+    min-width: 0;
+  }
+
   &__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: $spacing-4;
     border-bottom: 1px solid $color-border;
-    min-width: $sidebar-width; // Prevent content from collapsing
-    transition: opacity $transition-normal;
+    min-height: 60px;
   }
-  
+
   &__logo {
     font-size: $font-size-xl;
     font-weight: $font-weight-bold;
     color: $color-primary;
     margin: 0;
+    white-space: nowrap;
   }
-  
-  &__chats {
+
+  &__content {
     flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: $spacing-3;
-    min-width: $sidebar-width; // Prevent content from collapsing
-    transition: opacity $transition-normal;
-    @include custom-scrollbar;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
-  
+
+  &__section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-3 $spacing-4;
+    border-bottom: 1px solid $color-border;
+  }
+
   &__section-title {
     font-size: $font-size-xs;
     font-weight: $font-weight-semibold;
     color: $color-text-tertiary;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    padding: $spacing-2 $spacing-2;
     margin: 0;
   }
-  
+
+  &__new-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: $border-radius-md;
+    background: $color-primary;
+    color: $color-text-inverse;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all $transition-fast;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      background: $color-primary-dark;
+      transform: scale(1.05);
+    }
+  }
+
+  &__list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: $spacing-2;
+    @include custom-scrollbar;
+  }
+
   &__loading,
   &__empty {
     padding: $spacing-4;
@@ -75,13 +189,13 @@
     color: $color-text-tertiary;
     font-size: $font-size-sm;
   }
-  
+
   &__chat-list {
     list-style: none;
     margin: 0;
     padding: 0;
   }
-  
+
   &__chat-item {
     display: flex;
     align-items: center;
@@ -91,31 +205,32 @@
     cursor: pointer;
     transition: all $transition-fast;
     min-height: 40px;
-    
+
     &:hover {
       background: $color-bg-tertiary;
-      
+
       .sidebar__chat-actions {
         opacity: 1;
       }
     }
-    
+
     &.active {
       background: $color-bg-tertiary;
-      
+
       .sidebar__chat-title {
         color: $color-text-primary;
         font-weight: $font-weight-medium;
       }
     }
   }
-  
+
   &__chat-title {
     flex: 1;
     font-size: $font-size-sm;
     color: $color-text-secondary;
     @include text-truncate;
     cursor: pointer;
+    min-width: 0;
   }
 
   &__chat-rename-input {
@@ -127,12 +242,13 @@
     background: $color-bg-primary;
     color: $color-text-primary;
     outline: none;
-    
+    min-width: 0;
+
     &:focus {
       border-color: $color-primary-dark;
     }
   }
-  
+
   &__chat-actions {
     display: flex;
     align-items: center;
@@ -140,33 +256,35 @@
     opacity: 0;
     transition: opacity $transition-fast;
     flex-shrink: 0;
+    margin-left: $spacing-2;
   }
-  
+
   &__chat-action {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     background: transparent;
     border: none;
     border-radius: $border-radius-sm;
     color: $color-text-tertiary;
     cursor: pointer;
     transition: all $transition-fast;
-    
+
     svg {
       width: 14px;
       height: 14px;
     }
-    
+
     &:hover {
       background: $color-bg-secondary;
       color: $color-text-primary;
     }
-    
+
     &--delete:hover {
       color: $color-error;
+      background: rgba($color-error, 0.1);
     }
   }
 }
@@ -180,12 +298,12 @@
     height: calc(100vh - $header-height);
     z-index: $z-index-fixed;
     box-shadow: $shadow-lg;
-    
-    &:not(.sidebar--open) {
+
+    &--collapsed {
       transform: translateX(-100%);
-      width: $sidebar-width; // Keep width on mobile, just slide out
+      width: $sidebar-width + $rail-width;
     }
-    
+
     &--open {
       transform: translateX(0);
     }

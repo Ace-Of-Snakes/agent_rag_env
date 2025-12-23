@@ -2,12 +2,16 @@ import { useState, useCallback } from 'react';
 import { Header } from './components/Layout/Header/Header';
 import { Sidebar } from './components/Layout/Sidebar/Sidebar';
 import { ChatContainer } from './components/Chat/ChatContainer/ChatContainer';
+import { DocumentsPage } from './components/Documents/DocumentsPage/DocumentsPage';
 import { chatApi } from './services/api';
 import { useTheme } from './hooks/useTheme';
 import './App.scss';
 
+type ViewType = 'chats' | 'documents';
+
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [currentView, setCurrentView] = useState<ViewType>('chats');
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { theme, toggleTheme } = useTheme();
@@ -16,6 +20,7 @@ function App() {
     try {
       const chat = await chatApi.create({});
       setCurrentChatId(chat.id);
+      setCurrentView('chats');
     } catch (err) {
       setError('Failed to create new chat');
       console.error(err);
@@ -24,6 +29,11 @@ function App() {
 
   const handleSelectChat = useCallback((chatId: string) => {
     setCurrentChatId(chatId);
+    setCurrentView('chats');
+  }, []);
+
+  const handleViewChange = useCallback((view: ViewType) => {
+    setCurrentView(view);
   }, []);
 
   const handleError = useCallback((err: Error) => {
@@ -39,7 +49,6 @@ function App() {
     <div className="app">
       <Header 
         onToggleSidebar={toggleSidebar} 
-        onNewChat={handleNewChat}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
@@ -48,15 +57,22 @@ function App() {
         <Sidebar
           isOpen={sidebarOpen}
           currentChatId={currentChatId}
+          currentView={currentView}
           onSelectChat={handleSelectChat}
           onNewChat={handleNewChat}
+          onViewChange={handleViewChange}
         />
         
         <main className="app__main">
-          <ChatContainer
-            chatId={currentChatId}
-            onError={handleError}
-          />
+          {currentView === 'chats' && (
+            <ChatContainer
+              chatId={currentChatId}
+              onError={handleError}
+            />
+          )}
+          {currentView === 'documents' && (
+            <DocumentsPage onError={handleError} />
+          )}
         </main>
       </div>
 
