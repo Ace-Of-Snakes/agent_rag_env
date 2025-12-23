@@ -18,7 +18,24 @@ function parseContent(content: string): string {
   
   const trimmed = content.trim();
   
-  // Check if it looks like JSON
+  // Check if the entire content is wrapped in a JSON code block
+  // Pattern: ```json\n{...}\n``` or ```\n{...}\n```
+  const jsonCodeBlockRegex = /^```(?:json)?\s*\n([\s\S]+)\n```\s*$/;
+  const jsonCodeBlockMatch = trimmed.match(jsonCodeBlockRegex);
+  
+  if (jsonCodeBlockMatch) {
+    const jsonContent = jsonCodeBlockMatch[1].trim();
+    try {
+      const parsed = JSON.parse(jsonContent);
+      if (typeof parsed === 'object' && parsed !== null && 'response' in parsed) {
+        return parsed.response;
+      }
+    } catch {
+      // Not valid JSON, continue
+    }
+  }
+  
+  // Check if it's raw JSON (starts with { and ends with })
   if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
     try {
       const parsed = JSON.parse(trimmed);
@@ -32,26 +49,23 @@ function parseContent(content: string): string {
         if ('message' in parsed && typeof parsed.message === 'string') {
           return parsed.message;
         }
-        // If it's an agent thought without a direct response, return the content
-        if ('thought' in parsed && parsed.action === 'respond') {
-          return parsed.response || content;
-        }
       }
     } catch {
       // Not valid JSON, return as-is
     }
   }
   
-  // Check for JSON code blocks at the start that might be agent output
-  const jsonBlockMatch = trimmed.match(/^```(?:json)?\s*\n?({[\s\S]*?})\s*\n?```/);
-  if (jsonBlockMatch) {
+  // Check for JSON at the start followed by other content
+  // This handles cases where the LLM outputs JSON and then continues
+  const jsonStartMatch = trimmed.match(/^```(?:json)?\s*\n(\{[\s\S]*?\})\n```/);
+  if (jsonStartMatch) {
     try {
-      const parsed = JSON.parse(jsonBlockMatch[1]);
-      if (typeof parsed === 'object' && 'response' in parsed) {
+      const parsed = JSON.parse(jsonStartMatch[1]);
+      if (parsed.response) {
         return parsed.response;
       }
     } catch {
-      // Continue with original content
+      // Continue
     }
   }
   

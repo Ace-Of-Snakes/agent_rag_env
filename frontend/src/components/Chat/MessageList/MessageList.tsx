@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { MessageBubble } from '../MessageBubble/MessageBubble';
 import type { Message } from '@/types';
 import './MessageList.scss';
@@ -7,6 +7,40 @@ interface MessageListProps {
   messages: Message[];
   streamingContent?: string;
   isStreaming?: boolean;
+}
+
+/**
+ * Parse streaming content to extract response from JSON if present.
+ * This helps show cleaner content during streaming.
+ */
+function parseStreamingContent(content: string): string {
+  if (!content) return '';
+  
+  const trimmed = content.trim();
+  
+  // If we're in the middle of streaming JSON, try to extract response
+  // Check if it looks like it might be JSON output
+  if (trimmed.startsWith('```json') || trimmed.startsWith('{')) {
+    // Try to find and extract a response field
+    const responseMatch = trimmed.match(/"response"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    if (responseMatch) {
+      // Unescape the JSON string
+      try {
+        const unescaped = JSON.parse(`"${responseMatch[1]}"`);
+        return unescaped;
+      } catch {
+        return responseMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+      }
+    }
+    
+    // If we haven't found a response yet, show a loading indicator
+    // or partial content
+    if (trimmed.includes('"thought"') && !trimmed.includes('"response"')) {
+      return '...';
+    }
+  }
+  
+  return content;
 }
 
 export function MessageList({
@@ -20,6 +54,11 @@ export function MessageList({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingContent]);
+
+  // Parse streaming content
+  const displayStreamingContent = useMemo(() => {
+    return parseStreamingContent(streamingContent || '');
+  }, [streamingContent]);
 
   if (messages.length === 0 && !isStreaming) {
     return (
@@ -50,7 +89,7 @@ export function MessageList({
           <MessageBubble key={message.id} message={message} />
         ))}
         
-        {isStreaming && streamingContent && (
+        {isStreaming && displayStreamingContent && (
           <MessageBubble
             message={{
               id: 'streaming',
@@ -59,7 +98,7 @@ export function MessageList({
               branch: 'main',
               role: 'assistant',
               message_type: 'text',
-              content: streamingContent,
+              content: displayStreamingContent,
               token_count: null,
               tool_name: null,
               tool_params: null,

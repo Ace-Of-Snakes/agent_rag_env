@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import './CodeBlock.scss';
 
 interface CodeBlockProps {
@@ -24,6 +26,22 @@ export function CodeBlock({ code, language, inline = false }: CodeBlockProps) {
     return <code className="code-inline">{code}</code>;
   }
 
+  // Map common language aliases
+  const languageMap: Record<string, string> = {
+    js: 'javascript',
+    ts: 'typescript',
+    py: 'python',
+    rb: 'ruby',
+    sh: 'bash',
+    shell: 'bash',
+    yml: 'yaml',
+    md: 'markdown',
+  };
+
+  const normalizedLanguage = language 
+    ? languageMap[language.toLowerCase()] || language.toLowerCase()
+    : 'text';
+
   return (
     <div className="code-block">
       <div className="code-block__header">
@@ -47,11 +65,31 @@ export function CodeBlock({ code, language, inline = false }: CodeBlockProps) {
         </button>
       </div>
       <div className="code-block__content">
-        <pre>
-          <code className={language ? `language-${language}` : ''}>
-            {code}
-          </code>
-        </pre>
+        <SyntaxHighlighter
+          language={normalizedLanguage}
+          style={oneDark}
+          customStyle={{
+            margin: 0,
+            padding: '1rem',
+            background: 'transparent',
+            fontSize: '0.875rem',
+            lineHeight: 1.6,
+          }}
+          codeTagProps={{
+            style: {
+              fontFamily: "'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Monaco, Consolas, monospace",
+            }
+          }}
+          showLineNumbers={code.split('\n').length > 3}
+          lineNumberStyle={{
+            minWidth: '2.5em',
+            paddingRight: '1em',
+            color: '#636d83',
+            userSelect: 'none',
+          }}
+        >
+          {code}
+        </SyntaxHighlighter>
       </div>
     </div>
   );
