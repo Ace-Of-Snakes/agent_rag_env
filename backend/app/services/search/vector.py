@@ -96,7 +96,7 @@ class VectorSearchService:
                 select(
                     Chunk.id.label('chunk_id'),
                     Chunk.document_id,
-                    Document.filename.label('document_filename'),
+                    Document.original_filename.label('document_filename'),
                     Chunk.content,
                     Chunk.page_number,
                     Chunk.chunk_metadata.label('metadata'),
@@ -225,7 +225,7 @@ class VectorSearchService:
                 select(
                     Chunk.id.label('chunk_id'),
                     Chunk.document_id,
-                    Document.filename.label('document_filename'),
+                    Document.original_filename.label('document_filename'),
                     Chunk.content,
                     Chunk.page_number,
                     Chunk.chunk_metadata.label('metadata'),
@@ -319,7 +319,7 @@ class VectorSearchService:
             stmt = (
                 select(
                     Document.id,
-                    Document.filename,
+                    Document.original_filename.label('filename'),
                     Document.summary,
                     similarity
                 )

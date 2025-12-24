@@ -36,6 +36,11 @@ function App() {
     setCurrentView(view);
   }, []);
 
+  // Just clear the chat selection - don't create a new chat
+  const handleClearChat = useCallback(() => {
+    setCurrentChatId(null);
+  }, []);
+
   const handleError = useCallback((err: Error) => {
     setError(err.message);
     setTimeout(() => setError(null), 5000);
@@ -61,6 +66,7 @@ function App() {
           onSelectChat={handleSelectChat}
           onNewChat={handleNewChat}
           onViewChange={handleViewChange}
+          onClearChat={handleClearChat}
         />
         
         <main className="app__main">

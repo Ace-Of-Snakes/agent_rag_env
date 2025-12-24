@@ -5,7 +5,7 @@ Chat service for conversation management.
 import uuid
 from typing import Dict, List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -477,17 +477,39 @@ class ChatService:
         chat_id: uuid.UUID,
         session: Optional[AsyncSession] = None
     ) -> None:
-        """Soft delete a chat."""
+        """
+        Permanently delete a chat and all its messages.
+        
+        Args:
+            chat_id: Chat identifier
+            session: Database session
+        """
         async def execute(session: AsyncSession) -> None:
-            chat = await self.get_chat(chat_id, session)
-            chat.soft_delete()
+            # First verify the chat exists
+            result = await session.execute(
+                select(Chat).where(Chat.id == chat_id)
+            )
+            chat = result.scalar_one_or_none()
+            
+            if not chat:
+                raise ChatNotFoundError(str(chat_id))
+            
+            # Delete all messages for this chat first (foreign key constraint)
+            await session.execute(
+                delete(Message).where(Message.chat_id == chat_id)
+            )
+            
+            # Delete the chat
+            await session.execute(
+                delete(Chat).where(Chat.id == chat_id)
+            )
             
             await session.commit()
             
             # Clean up cache
             await redis_helper.invalidate_chat_history(str(chat_id))
             
-            logger.info("Chat deleted", chat_id=str(chat_id))
+            logger.info("Chat permanently deleted", chat_id=str(chat_id))
         
         if session:
             await execute(session)

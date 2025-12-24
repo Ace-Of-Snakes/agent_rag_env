@@ -12,6 +12,7 @@ interface SidebarProps {
   onSelectChat: (chatId: string) => void;
   onNewChat: () => void;
   onViewChange: (view: ViewType) => void;
+  onClearChat?: () => void; // New: just clear selection, don't create new
 }
 
 export function Sidebar({
@@ -21,6 +22,7 @@ export function Sidebar({
   onSelectChat,
   onNewChat,
   onViewChange,
+  onClearChat,
 }: SidebarProps) {
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,6 +30,7 @@ export function Sidebar({
   const [editTitle, setEditTitle] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Load chats on mount
   useEffect(() => {
     loadChats();
   }, []);
@@ -52,12 +55,14 @@ export function Sidebar({
     }
   };
 
-  // Refresh chats when a new chat might have been created
+  // Only reload when a NEW chat is created (not on delete)
+  // Check if currentChatId exists and isn't in our list
   useEffect(() => {
-    if (currentChatId && !chats.find(c => c.id === currentChatId)) {
+    if (currentChatId && chats.length > 0 && !chats.find(c => c.id === currentChatId)) {
+      // This is likely a newly created chat, reload the list
       loadChats();
     }
-  }, [currentChatId, chats]);
+  }, [currentChatId]);
 
   const handleDeleteChat = async (e: React.MouseEvent, chatId: string) => {
     e.stopPropagation();
@@ -65,9 +70,14 @@ export function Sidebar({
 
     try {
       await chatApi.delete(chatId);
+      
+      // Remove from local state immediately
       setChats((prev) => prev.filter((c) => c.id !== chatId));
+      
+      // If this was the current chat, just clear the selection
+      // DON'T create a new chat - let user do that manually
       if (currentChatId === chatId) {
-        onNewChat();
+        onClearChat?.();
       }
     } catch (error) {
       console.error('Failed to delete chat:', error);
@@ -224,6 +234,8 @@ export function Sidebar({
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <polyline points="3 6 5 6 21 6" />
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                <line x1="10" y1="11" x2="10" y2="17" />
+                                <line x1="14" y1="11" x2="14" y2="17" />
                               </svg>
                             </button>
                           </div>
@@ -242,10 +254,8 @@ export function Sidebar({
             <div className="sidebar__section-header">
               <h3 className="sidebar__section-title">Documents</h3>
             </div>
-            <div className="sidebar__list">
-              <div className="sidebar__empty">
-                Manage your documents in the main panel
-              </div>
+            <div className="sidebar__nav-hint">
+              View and manage documents in the main panel
             </div>
           </div>
         )}

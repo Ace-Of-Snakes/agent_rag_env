@@ -136,6 +136,12 @@ class PerformanceSettings(BaseSettings):
 class DocumentSettings(BaseSettings):
     """Document processing configuration."""
     
+    # Add model_config to enable reading environment variables
+    model_config = SettingsConfigDict(
+        env_prefix="",  # No prefix, use aliases directly
+        extra="ignore"
+    )
+    
     chunk_size: int = Field(
         default=DocumentConstants.DEFAULT_CHUNK_SIZE,
         alias="CHUNK_SIZE"

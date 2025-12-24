@@ -151,7 +151,6 @@ class ChunkRepository(BaseRepository[Chunk]):
                 Chunk.chunk_index,
                 Chunk.content_type,
                 Chunk.chunk_metadata.label('metadata'),
-                Document.filename,
                 Document.original_filename,
                 similarity
             )
@@ -184,7 +183,7 @@ class ChunkRepository(BaseRepository[Chunk]):
                 "chunk_index": row.chunk_index,
                 "content_type": row.content_type,
                 "metadata": row.metadata,
-                "filename": row.filename,
+                "filename": row.original_filename,
                 "original_filename": row.original_filename,
                 "similarity": float(row.similarity)
             }
